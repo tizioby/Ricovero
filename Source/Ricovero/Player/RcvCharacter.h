@@ -62,8 +62,14 @@ protected:
 
 	// --- Input ---
 
-	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<UInputMappingContext> DefaultMappingContext;
+	/**
+	 * Tasti costruiti in C++ a runtime a partire dalle Input Action qui sotto,
+	 * così le mappature (e i modificatori di WASD) non dipendono da un asset fatto a mano.
+	 */
+	virtual void BuildMappingContext(UInputMappingContext* Context) const;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputMappingContext> RuntimeMappingContext;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> MoveAction;

@@ -6,6 +6,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "InputMappingContext.h"
+#include "InputModifiers.h"
 #include "Kismet/GameplayStatics.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Player/RcvStaminaComponent.h"
@@ -71,12 +73,55 @@ void ARcvCharacter::NotifyControllerChanged()
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 		{
-			if (DefaultMappingContext)
+			if (!RuntimeMappingContext)
 			{
-				Subsystem->AddMappingContext(DefaultMappingContext, 0);
+				RuntimeMappingContext = NewObject<UInputMappingContext>(this, TEXT("IMC_Runtime"));
+				BuildMappingContext(RuntimeMappingContext);
 			}
+			Subsystem->RemoveMappingContext(RuntimeMappingContext);
+			Subsystem->AddMappingContext(RuntimeMappingContext, 0);
 		}
 	}
+}
+
+namespace
+{
+	/** IA_Move è un Axis2D con X = destra e Y = avanti: i tasti singoli danno X positivo, quindi si ruotano/negano. */
+	void MapKey(UInputMappingContext* Context, const UInputAction* Action, const FKey& Key, bool bToForwardAxis = false, bool bNegate = false)
+	{
+		if (!Action)
+		{
+			return;
+		}
+		FEnhancedActionKeyMapping& Mapping = Context->MapKey(Action, Key);
+		if (bToForwardAxis)
+		{
+			Mapping.Modifiers.Add(NewObject<UInputModifierSwizzleAxis>(Context));
+		}
+		if (bNegate)
+		{
+			Mapping.Modifiers.Add(NewObject<UInputModifierNegate>(Context));
+		}
+	}
+}
+
+void ARcvCharacter::BuildMappingContext(UInputMappingContext* Context) const
+{
+	MapKey(Context, MoveAction, EKeys::W, true, false);
+	MapKey(Context, MoveAction, EKeys::S, true, true);
+	MapKey(Context, MoveAction, EKeys::D);
+	MapKey(Context, MoveAction, EKeys::A, false, true);
+	MapKey(Context, MoveAction, EKeys::Gamepad_Left2D);
+
+	MapKey(Context, LookAction, EKeys::Mouse2D);
+	MapKey(Context, LookAction, EKeys::Gamepad_Right2D);
+
+	MapKey(Context, SprintAction, EKeys::LeftShift);
+	MapKey(Context, SprintAction, EKeys::Gamepad_LeftThumbstick);
+
+	MapKey(Context, CrouchAction, EKeys::LeftControl);
+	MapKey(Context, CrouchAction, EKeys::C);
+	MapKey(Context, CrouchAction, EKeys::Gamepad_RightThumbstick);
 }
 
 void ARcvCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
