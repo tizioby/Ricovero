@@ -98,10 +98,181 @@ def step(delay, kind, targets=(), stagger=0.0, lock=False):
     return s
 
 
+# --- Asset veri (se importati con tools/import_assets.py) ---------------------
+# Ogni cubo del blockout resta come collisione invisibile e il modello vero gli viene
+# agganciato sopra: la fisica e il gameplay non cambiano, cambia solo l'aspetto.
+
+MODELS = "/Game/Ricovero/Models"
+TEXTURES = "/Game/Ricovero/Textures"
+
+
+def model_meshes(category, name, kind=unreal.StaticMesh):
+    """Tutte le mesh importate di un modello (i glTF di Poly Haven possono averne più di una)."""
+    folder = f"{MODELS}/{category}/{name}"
+    if not unreal.EditorAssetLibrary.does_directory_exist(folder):
+        return []
+    assets = [unreal.EditorAssetLibrary.load_asset(p) for p in unreal.EditorAssetLibrary.list_assets(folder, recursive=True)]
+    return [a for a in assets if isinstance(a, kind)]
+
+
+def meshes_size(meshes):
+    lo = [1e9, 1e9, 1e9]
+    hi = [-1e9, -1e9, -1e9]
+    for mesh in meshes:
+        box = mesh.get_bounding_box()
+        for i, axis in enumerate("xyz"):
+            lo[i] = min(lo[i], getattr(box.min, axis))
+            hi[i] = max(hi[i], getattr(box.max, axis))
+    return [hi[i] - lo[i] for i in range(3)]
+
+
+def place_model(label, category, name, location, yaw=0.0, collision=True, folder="Props"):
+    """Mette un modello vero nella scena. Restituisce gli attori creati (uno per mesh)."""
+    created = []
+    for i, mesh in enumerate(model_meshes(category, name)):
+        actor = spawn(unreal.StaticMeshActor, location, yaw=yaw, label=f"{label}_{i + 1:02d}")
+        comp = actor.static_mesh_component
+        comp.set_static_mesh(mesh)
+        if not collision:
+            comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+        actor.set_folder_path(folder)
+        created.append(actor)
+    return created
+
+
+def dress(cube, category, name, z=None):
+    """Sostituisce l'aspetto di un cubo del blockout con un modello vero, allineato al lato lungo."""
+    meshes = model_meshes(category, name)
+    if not meshes:
+        return []
+    origin, extent = cube.get_actor_bounds(False)
+    size = meshes_size(meshes)
+    cube_long_x = extent.x >= extent.y
+    model_long_x = size[0] >= size[1]
+    yaw = 0.0 if cube_long_x == model_long_x else 90.0
+    base = (origin.x, origin.y, origin.z - extent.z if z is None else z)
+    created = place_model(cube.get_actor_label() + "_Model", category, name, base, yaw=yaw, collision=False)
+    comp = cube.static_mesh_component
+    comp.set_visibility(False, False)
+    comp.set_cast_shadow(False)
+    movable = comp.get_editor_property("mobility") == unreal.ComponentMobility.MOVABLE
+    for actor in created:
+        if movable:
+            actor.static_mesh_component.set_mobility(unreal.ComponentMobility.MOVABLE)
+        actor.attach_to_actor(cube, "", unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD,
+                              unreal.AttachmentRule.KEEP_WORLD, False)
+    return created
+
+
+# Materiali delle superfici: proiezione in coordinate mondo, così le texture non si
+# stirano sui cubi scalati del blockout. Un master con ORM e uno con Roughness separata.
+
+asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+mel = unreal.MaterialEditingLibrary
+
+
+def ensure_world_master(name, split):
+    path = f"/Game/Ricovero/Materials/{name}"
+    if unreal.EditorAssetLibrary.does_asset_exist(path):
+        return unreal.EditorAssetLibrary.load_asset(path)
+    material = asset_tools.create_asset(name, "/Game/Ricovero/Materials", unreal.Material, unreal.MaterialFactoryNew())
+
+    def node(cls, x, y):
+        return mel.create_material_expression(material, cls, x, y)
+
+    def mask(source, x, y, channels):
+        m = node(unreal.MaterialExpressionComponentMask, x, y)
+        for ch in "rgba":
+            m.set_editor_property(ch, ch in channels)
+        mel.connect_material_expressions(source, "", m, "")
+        return m
+
+    def mul(a, b, x, y):
+        m = node(unreal.MaterialExpressionMultiply, x, y)
+        mel.connect_material_expressions(a, "", m, "A")
+        mel.connect_material_expressions(b, "", m, "B")
+        return m
+
+    def add(a, b, x, y):
+        m = node(unreal.MaterialExpressionAdd, x, y)
+        mel.connect_material_expressions(a, "", m, "A")
+        mel.connect_material_expressions(b, "", m, "B")
+        return m
+
+    # Posizione in mondo / dimensione della piastrella (cm).
+    world = node(unreal.MaterialExpressionWorldPosition, -2000, 0)
+    tile = node(unreal.MaterialExpressionScalarParameter, -2000, 150)
+    tile.set_editor_property("parameter_name", "TileSizeCm")
+    tile.set_editor_property("default_value", 200.0)
+    pos = node(unreal.MaterialExpressionDivide, -1800, 50)
+    mel.connect_material_expressions(world, "", pos, "A")
+    mel.connect_material_expressions(tile, "", pos, "B")
+
+    # Normale in mondo: sulle facce dei cubi vale esattamente 0 o 1 per asse.
+    normal_ws = node(unreal.MaterialExpressionVertexNormalWS, -2000, 400)
+    absn = node(unreal.MaterialExpressionAbs, -1800, 400)
+    mel.connect_material_expressions(normal_ws, "", absn, "")
+
+    uv_yz = mul(mask(pos, -1600, -100, "gb"), mask(absn, -1600, 300, "r"), -1400, -100)
+    uv_xz = mul(mask(pos, -1600, 50, "rb"), mask(absn, -1600, 450, "g"), -1400, 50)
+    uv_xy = mul(mask(pos, -1600, 200, "rg"), mask(absn, -1600, 600, "b"), -1400, 200)
+    uv = add(add(uv_yz, uv_xz, -1200, 0), uv_xy, -1000, 50)
+
+    def tex(param, sampler, y):
+        t = node(unreal.MaterialExpressionTextureSampleParameter2D, -700, y)
+        t.set_editor_property("parameter_name", param)
+        t.set_editor_property("sampler_type", sampler)
+        mel.connect_material_expressions(uv, "", t, "UVs")
+        return t
+
+    base = tex("BaseColor", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -400)
+    mel.connect_material_property(base, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
+    normal = tex("Normal", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, -100)
+    mel.connect_material_property(normal, "RGB", unreal.MaterialProperty.MP_NORMAL)
+    if split:
+        rough = tex("Roughness", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE, 200)
+        mel.connect_material_property(rough, "R", unreal.MaterialProperty.MP_ROUGHNESS)
+    else:
+        orm = tex("ORM", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR, 200)
+        mel.connect_material_property(orm, "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
+        mel.connect_material_property(orm, "G", unreal.MaterialProperty.MP_ROUGHNESS)
+        mel.connect_material_property(orm, "B", unreal.MaterialProperty.MP_METALLIC)
+    mel.recompile_material(material)
+    unreal.EditorAssetLibrary.save_loaded_asset(material)
+    return material
+
+
+def surface_material(name, tile_cm=200.0):
+    """Material instance in coordinate mondo per una superficie importata, o None se manca."""
+    folder = f"{TEXTURES}/Surfaces/{name}"
+    textures = {}
+    for suffix in ("D", "N", "ORM", "R"):
+        path = f"{folder}/T_{name}_{suffix}"
+        if unreal.EditorAssetLibrary.does_asset_exist(path):
+            textures[suffix] = unreal.EditorAssetLibrary.load_asset(path)
+    if "D" not in textures:
+        return None
+    split = "ORM" not in textures
+    master = ensure_world_master("M_Surface_World_Split" if split else "M_Surface_World", split)
+    mi_path = f"{folder}/MI_{name}_World"
+    if unreal.EditorAssetLibrary.does_asset_exist(mi_path):
+        mi = unreal.EditorAssetLibrary.load_asset(mi_path)
+    else:
+        mi = asset_tools.create_asset(f"MI_{name}_World", folder, unreal.MaterialInstanceConstant,
+                                      unreal.MaterialInstanceConstantFactoryNew())
+    mel.set_material_instance_parent(mi, master)
+    for suffix, param in {"D": "BaseColor", "N": "Normal", "ORM": "ORM", "R": "Roughness"}.items():
+        if suffix in textures:
+            mel.set_material_instance_texture_parameter_value(mi, param, textures[suffix])
+    mel.set_material_instance_scalar_parameter_value(mi, "TileSizeCm", tile_cm)
+    unreal.EditorAssetLibrary.save_loaded_asset(mi)
+    return mi
+
+
 # --- Pavimento e soffitto ----------------------------------------------------
 
-box("Floor", -520, 3420, -220, 220, -10, 0)
-box("Ceiling", -520, 3420, -220, 220, WALL_H, WALL_H + 10)
+floor = box("Floor", -520, 3420, -220, 220, -10, 0)
+ceiling = box("Ceiling", -520, 3420, -220, 220, WALL_H, WALL_H + 10)
 
 # --- Stanza 67 (x -500..0, y -200..200) --------------------------------------
 
@@ -115,10 +286,10 @@ wall_y("Room_S", -200, -500, 0)
 # Parete verso il corridoio con la porta (vano 100 x 210 cm).
 wall_x("Room_Front", 0, -200, 200, gaps=[(-50, 50, 210)])
 
-box("Gurney", -400, -200, -40, 40, 0, 90)
-box("Cart", -190, -110, 120, 170, 0, 80)
+gurney = box("Gurney", -400, -200, -40, 40, 0, 90)
+cart = box("Cart", -190, -110, 120, 170, 0, 80)
 box("Monitor_Stand", -420, -380, -190, -150, 0, 110)
-box("Monitor", -425, -375, -190, -160, 110, 150)
+monitor = box("Monitor", -425, -375, -190, -160, 110, 150)
 
 monitor_light = spawn(unreal.PointLight, (-400, -150, 135), label="Light_Monitor")
 monitor_light.light_component.set_intensity(80.0)
@@ -167,8 +338,8 @@ box("Corridor_Fill_S", 0, 3000, -220, -125, 0, WALL_H)
 door("Door_Side_112", 800, yaw=0.0, y=112, locked=True)
 door("Door_Side_118", 1600, yaw=0.0, y=-112, locked=True)
 
-box("Bench", 1150, 1300, 70, 115, 0, 45)
-box("Gurney_Corridor", 1850, 2040, -115, -45, 0, 80)
+bench = box("Bench", 1150, 1300, 70, 115, 0, 45)
+gurney_corridor = box("Gurney_Corridor", 1850, 2040, -115, -45, 0, 80)
 
 document = unreal.RcvDocument()
 document.set_editor_property("id", "Doc_Act1_Chart67")
@@ -192,8 +363,28 @@ n5 = neon("Neon_05", 2550, unreal.RcvNeonState.FLICKER, lumens=450)
 n6 = neon("Neon_06", 2900, unreal.RcvNeonState.ON, lumens=300)
 
 # Sagoma del mostro: compare in fondo al corridoio e sparisce quando la luce si spegne.
-silhouette = box("Monster_Silhouette", 2770, 2830, -30, 30, 0, 215, mesh=CYLINDER)
-silhouette.set_folder_path("Gameplay")
+monster_meshes = model_meshes("Characters", "BoiledOne", unreal.SkeletalMesh)
+if monster_meshes:
+    # The Boiled One (landgr4, CC-BY): tutte le parti nello stesso punto, scalate a 2,6 m.
+    silhouette = []
+    for i, mesh in enumerate(monster_meshes):
+        part = spawn(unreal.SkeletalMeshActor, (2800, 0, 0), yaw=180.0, label=f"Monster_BoiledOne_{i + 1:02d}")
+        part.skeletal_mesh_component.set_skinned_asset_and_update(mesh)
+        part.set_folder_path("Gameplay")
+        silhouette.append(part)
+    lo, hi = 1e9, -1e9
+    for part in silhouette:
+        origin, extent = part.get_actor_bounds(False)
+        lo, hi = min(lo, origin.z - extent.z), max(hi, origin.z + extent.z)
+    if hi > lo:
+        factor = 260.0 / (hi - lo)
+        for part in silhouette:
+            part.set_actor_scale3d(unreal.Vector(factor, factor, factor))
+            loc = part.get_actor_location()
+            part.set_actor_location(unreal.Vector(loc.x, loc.y, -lo * factor), False, False)
+else:
+    silhouette = [box("Monster_Silhouette", 2770, 2830, -30, 30, 0, 215, mesh=CYLINDER)]
+    silhouette[0].set_folder_path("Gameplay")
 
 # Fondo del corridoio con la porta del reparto.
 wall_x("Corridor_End", 3000, -125, 125, gaps=[(-50, 50, 210)])
@@ -204,9 +395,9 @@ door("Door_Ward", 3000)
 event = spawn(unreal.RcvScriptedTrigger, (2050, 0, 150), label="Event_Act1_LightsOut")
 event.set_editor_property("steps", [
     # La sagoma resta visibile poco più di mezzo secondo: si spegne la luce alle sue spalle e sparisce.
-    step(0.0, unreal.RcvStepType.SHOW_ACTORS, [silhouette]),
+    step(0.0, unreal.RcvStepType.SHOW_ACTORS, silhouette),
     step(0.5, unreal.RcvStepType.LIGHTS_OFF, [n6]),
-    step(0.1, unreal.RcvStepType.HIDE_ACTORS, [silhouette]),
+    step(0.1, unreal.RcvStepType.HIDE_ACTORS, silhouette),
     step(0.3, unreal.RcvStepType.LIGHTS_OFF, [n5, n4], stagger=0.5),
     step(0.8, unreal.RcvStepType.LIGHTS_OFF, [n2]),
     step(1.5, unreal.RcvStepType.DOOR_SLAM, [door_67], lock=True),
@@ -253,6 +444,47 @@ for key, value in {
     settings.set_editor_property(key, value)
 ppv.set_editor_property("settings", settings)
 ppv.set_folder_path("Lights")
+
+# --- Arredo con gli asset veri --------------------------------------------------
+# Se un asset non è stato importato, resta il cubo grigio del blockout.
+
+dress(gurney, "Furniture", "HospitalBedFrame")
+dress(gurney_corridor, "Furniture", "HospitalBedFrame")
+dress(cart, "Medical", "RustyTrolley")
+dress(wheelchair, "Medical", "Wheelchair")
+dress(monitor, "Props", "CrtTv")
+if model_meshes("Furniture", "MetalChair"):
+    bench.static_mesh_component.set_visibility(False, False)
+    place_model("Chair_A", "Furniture", "MetalChair", (1190, 95, 0), yaw=-90.0)
+    place_model("Chair_B", "Furniture", "MetalChair", (1265, 95, 0), yaw=-90.0)
+
+# Oggetti di scena: ognuno racconta qualcosa (abbandono, fuga, incuria).
+place_model("Rack_Room", "Furniture", "MetalRack", (-300, 168, 0), yaw=0.0)
+place_model("MedicalBox_Cart", "Medical", "MedicalBox", (-175, 132, 80), yaw=15.0)
+place_model("Crutches_Room", "Medical", "Crutches", (-470, -170, 0), yaw=30.0)
+place_model("WetFloor_Corridor", "Props", "WetFloorSign", (650, -70, 0), yaw=40.0)
+place_model("TrashCan_Corridor", "Props", "MetalTrashCan", (1420, 100, 0))
+place_model("FireAlarm_Corridor", "Props", "FireAlarm", (1000, 113, 150), yaw=-90.0, collision=False)
+place_model("Box_Corridor_A", "Props", "CardboardBox", (2380, 95, 0), yaw=10.0)
+place_model("Box_Corridor_B", "Props", "CardboardBox", (2440, 90, 0), yaw=-25.0)
+place_model("Clipboard_Gurney", "Props", "Clipboard", (1900, -80, 81), yaw=70.0, collision=False)
+
+# Superfici.
+surfaces = {
+    "Floor": surface_material("FloorLinoleum", 150.0),
+    "Ceiling": surface_material("CeilingTiles", 120.0),
+    "Room_": surface_material("WallPeelingPaint", 250.0),
+    "Corridor_": surface_material("WallCrackedPlaster", 250.0),
+    "Ward_": surface_material("WallTilesBroken", 120.0),
+}
+for actor in actors.get_all_level_actors():
+    if not isinstance(actor, unreal.StaticMeshActor) or str(actor.get_folder_path()) != "Blockout":
+        continue
+    label = actor.get_actor_label()
+    for prefix, material in surfaces.items():
+        if material and label.startswith(prefix):
+            actor.static_mesh_component.set_material(0, material)
+            break
 
 if not level_editor.save_current_level():
     raise RuntimeError(f"Salvataggio di {MAP_PATH} fallito")
