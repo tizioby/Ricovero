@@ -171,7 +171,7 @@ asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
 mel = unreal.MaterialEditingLibrary
 
 
-def ensure_world_master(name, split):
+def ensure_world_master(name, split, textures):
     path = f"/Game/Ricovero/Materials/{name}"
     if unreal.EditorAssetLibrary.does_asset_exist(path):
         return unreal.EditorAssetLibrary.load_asset(path)
@@ -218,22 +218,24 @@ def ensure_world_master(name, split):
     uv_xy = mul(mask(pos, -1600, 200, "rg"), mask(absn, -1600, 600, "b"), -1400, 200)
     uv = add(add(uv_yz, uv_xz, -1200, 0), uv_xy, -1000, 50)
 
-    def tex(param, sampler, y):
+    def tex(param, sampler, y, default):
+        # Default dello stesso tipo del sampler, altrimenti il materiale non compila.
         t = node(unreal.MaterialExpressionTextureSampleParameter2D, -700, y)
         t.set_editor_property("parameter_name", param)
+        t.set_editor_property("texture", default)
         t.set_editor_property("sampler_type", sampler)
         mel.connect_material_expressions(uv, "", t, "UVs")
         return t
 
-    base = tex("BaseColor", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -400)
+    base = tex("BaseColor", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -400, textures["D"])
     mel.connect_material_property(base, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
-    normal = tex("Normal", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, -100)
+    normal = tex("Normal", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, -100, textures["N"])
     mel.connect_material_property(normal, "RGB", unreal.MaterialProperty.MP_NORMAL)
     if split:
-        rough = tex("Roughness", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE, 200)
+        rough = tex("Roughness", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE, 200, textures["R"])
         mel.connect_material_property(rough, "R", unreal.MaterialProperty.MP_ROUGHNESS)
     else:
-        orm = tex("ORM", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR, 200)
+        orm = tex("ORM", unreal.MaterialSamplerType.SAMPLERTYPE_MASKS, 200, textures["ORM"])
         mel.connect_material_property(orm, "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
         mel.connect_material_property(orm, "G", unreal.MaterialProperty.MP_ROUGHNESS)
         mel.connect_material_property(orm, "B", unreal.MaterialProperty.MP_METALLIC)
@@ -250,10 +252,10 @@ def surface_material(name, tile_cm=200.0):
         path = f"{folder}/T_{name}_{suffix}"
         if unreal.EditorAssetLibrary.does_asset_exist(path):
             textures[suffix] = unreal.EditorAssetLibrary.load_asset(path)
-    if "D" not in textures:
+    if "D" not in textures or "N" not in textures or ("ORM" not in textures and "R" not in textures):
         return None
     split = "ORM" not in textures
-    master = ensure_world_master("M_Surface_World_Split" if split else "M_Surface_World", split)
+    master = ensure_world_master("M_Surface_World_Split" if split else "M_Surface_World", split, textures)
     mi_path = f"{folder}/MI_{name}_World"
     if unreal.EditorAssetLibrary.does_asset_exist(mi_path):
         mi = unreal.EditorAssetLibrary.load_asset(mi_path)

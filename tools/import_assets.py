@@ -67,15 +67,18 @@ def import_files(files, destination, names=None):
 
 # --- Master material -----------------------------------------------------------
 
-def texture_param(material, name, sampler, x, y, uv):
+def texture_param(material, name, sampler, x, y, uv, default):
+    # Il default deve avere lo stesso tipo del sampler, altrimenti il materiale non compila
+    # (la texture di default del motore è sRGB): usiamo una texture vera del primo set importato.
     node = mel.create_material_expression(material, unreal.MaterialExpressionTextureSampleParameter2D, x, y)
     node.set_editor_property("parameter_name", name)
+    node.set_editor_property("texture", default)
     node.set_editor_property("sampler_type", sampler)
     mel.connect_material_expressions(uv, "", node, "UVs")
     return node
 
 
-def ensure_master(name, split):
+def ensure_master(name, split, textures):
     path = f"{MATERIALS_DIR}/{name}"
     if eal.does_asset_exist(path):
         return eal.load_asset(path)
@@ -90,22 +93,22 @@ def ensure_master(name, split):
     mel.connect_material_expressions(coords, "", uv, "A")
     mel.connect_material_expressions(tiling, "", uv, "B")
 
-    base = texture_param(material, "BaseColor", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -400, -300, uv)
+    base = texture_param(material, "BaseColor", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR, -400, -300, uv, textures["D"])
     mel.connect_material_property(base, "RGB", unreal.MaterialProperty.MP_BASE_COLOR)
 
-    normal = texture_param(material, "Normal", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, -400, 0, uv)
+    normal = texture_param(material, "Normal", unreal.MaterialSamplerType.SAMPLERTYPE_NORMAL, -400, 0, uv, textures["N"])
     mel.connect_material_property(normal, "RGB", unreal.MaterialProperty.MP_NORMAL)
 
     if split:
-        rough = texture_param(material, "Roughness", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE, -400, 300, uv)
+        rough = texture_param(material, "Roughness", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE, -400, 300, uv, textures["R"])
         mel.connect_material_property(rough, "R", unreal.MaterialProperty.MP_ROUGHNESS)
-        ao = texture_param(material, "AO", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE, -400, 600, uv)
+        ao = texture_param(material, "AO", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_GRAYSCALE, -400, 600, uv, textures.get("AO", textures["R"]))
         mel.connect_material_property(ao, "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
         metallic = mel.create_material_expression(material, unreal.MaterialExpressionScalarParameter, -400, 900)
         metallic.set_editor_property("parameter_name", "Metallic")
         mel.connect_material_property(metallic, "", unreal.MaterialProperty.MP_METALLIC)
     else:
-        orm = texture_param(material, "ORM", unreal.MaterialSamplerType.SAMPLERTYPE_LINEAR_COLOR, -400, 300, uv)
+        orm = texture_param(material, "ORM", unreal.MaterialSamplerType.SAMPLERTYPE_MASKS, -400, 300, uv, textures["ORM"])
         mel.connect_material_property(orm, "R", unreal.MaterialProperty.MP_AMBIENT_OCCLUSION)
         mel.connect_material_property(orm, "G", unreal.MaterialProperty.MP_ROUGHNESS)
         mel.connect_material_property(orm, "B", unreal.MaterialProperty.MP_METALLIC)
@@ -158,8 +161,11 @@ def import_texture_set(meta, folder):
             configure_texture(texture, suffix)
             textures[suffix] = texture
 
+    if "N" not in textures or ("ORM" not in textures and "R" not in textures):
+        unreal.log_warning(f"[Ricovero] {name}: mancano normal o roughness, niente material instance")
+        return True
     split = "ORM" not in textures
-    master = ensure_master("M_Surface_Master_Split" if split else "M_Surface_Master", split)
+    master = ensure_master("M_Surface_Master_Split" if split else "M_Surface_Master", split, textures)
     mi_path = f"{destination}/MI_{name}"
     if eal.does_asset_exist(mi_path):
         mi = eal.load_asset(mi_path)
