@@ -74,7 +74,9 @@ def download_polyhaven(asset_id, folder):
     files = http_json(f"https://api.polyhaven.com/files/{asset_id}")
     authors = ", ".join(info.get("authors", {}).keys()) or "Poly Haven"
 
-    if "gltf" in files:
+    # Il tipo dice cos'è l'asset (0 HDRI, 1 texture, 2 modello): anche le texture
+    # offrono un glTF, ma è solo un piano di anteprima.
+    if info.get("type") == 2:
         # Modello: glTF con le sue texture incluse.
         res = pick_resolution(files["gltf"], POLYHAVEN_RES)
         gltf = files["gltf"][res]["gltf"]
@@ -142,7 +144,7 @@ def download_sketchfab(uid, folder):
 
     links = http_json(f"https://api.sketchfab.com/v3/models/{uid}/download", headers={"Authorization": f"Token {token}"})
     if "glb" in links:
-        http_download(links["glb"]["url"], folder / f"{uid}.glb")
+        http_download(links["glb"]["url"], folder / f"{folder.name}.glb")
         kind = "modello GLB"
     else:
         archive = http_download(links["gltf"]["url"], folder / f"{uid}.zip")

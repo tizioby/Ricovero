@@ -3,7 +3,7 @@ Importa in Unreal gli asset scaricati in Assets_Raw/ da tools/download_assets.py
 
 Da eseguire nell'editor (File -> Esegui script Python). Per ogni asset:
   - modelli (glb/gltf/fbx) -> /Game/Ricovero/Models/<Categoria>/<Nome>/SM_<Nome>,
-    con Nanite attivo e collisione semplice a scatola;
+    con Nanite attivo e collisione semplice a scatola; quelli con scheletro diventano SK_<Nome>;
   - texture PBR -> /Game/Ricovero/Textures/<Categoria>/<Nome>/T_<Nome>_<D|N|ORM|R|AO|H>,
     con sRGB e compressione corretti, più un Material Instance MI_<Nome>.
 Crea anche i master material (se mancano):
@@ -28,14 +28,14 @@ mel = unreal.MaterialEditingLibrary
 MODEL_EXTS = (".glb", ".gltf", ".fbx")
 TEXTURE_EXTS = (".jpg", ".jpeg", ".png", ".tga", ".exr")
 
-# Riconoscimento delle mappe: suffissi Poly Haven (già rinominati dal downloader) e ambientCG.
+# Riconoscimento delle mappe: suffissi Poly Haven (rinominati dal downloader o originali) e ambientCG.
 MAP_PATTERNS = [
-    ("ORM", ("_ORM.",)),
-    ("N", ("_N.", "_NormalGL.")),
-    ("D", ("_D.", "_Color.")),
-    ("R", ("_R.", "_Roughness.")),
-    ("AO", ("_AO.", "_AmbientOcclusion.")),
-    ("H", ("_H.", "_Displacement.")),
+    ("ORM", ("_ORM.", "_arm_")),
+    ("N", ("_N.", "_NormalGL.", "_nor_gl_")),
+    ("D", ("_D.", "_Color.", "_diff_")),
+    ("R", ("_R.", "_Roughness.", "_rough_")),
+    ("AO", ("_AO.", "_AmbientOcclusion.", "_ao_")),
+    ("H", ("_H.", "_Displacement.", "_disp_")),
 ]
 
 
@@ -177,6 +177,10 @@ def import_texture_set(meta, folder):
 
 # --- Modelli -------------------------------------------------------------------
 
+def is_model(meta):
+    return meta.get("kind", "").startswith("modello")
+
+
 def import_model(meta, folder):
     name, category = meta["name"], meta["category"]
     destination = f"/Game/Ricovero/Models/{category}/{name}"
@@ -188,18 +192,23 @@ def import_model(meta, folder):
     candidates.sort(key=lambda p: MODEL_EXTS.index(p.suffix.lower()))
     import_files([candidates[0]], destination)
 
-    meshes = [eal.load_asset(p) for p in eal.list_assets(destination, recursive=True)]
-    meshes = [m for m in meshes if isinstance(m, unreal.StaticMesh)]
+    assets = [eal.load_asset(p) for p in eal.list_assets(destination, recursive=True)]
+    meshes = [m for m in assets if isinstance(m, (unreal.StaticMesh, unreal.SkeletalMesh))]
     subsystem = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
     for i, mesh in enumerate(meshes):
-        nanite = mesh.get_editor_property("nanite_settings")
-        nanite.set_editor_property("enabled", True)
-        mesh.set_editor_property("nanite_settings", nanite)
-        subsystem.remove_collisions(mesh)
-        subsystem.add_simple_collisions(mesh, unreal.ScriptCollisionShapeType.BOX)
-        eal.save_loaded_asset(mesh)
+        # Le mesh con scheletro (personaggi) restano senza Nanite e senza collisione a scatola:
+        # la collisione la danno il Physics Asset e la capsule del personaggio.
+        skeletal = isinstance(mesh, unreal.SkeletalMesh)
+        if not skeletal:
+            nanite = mesh.get_editor_property("nanite_settings")
+            nanite.set_editor_property("enabled", True)
+            mesh.set_editor_property("nanite_settings", nanite)
+            subsystem.remove_collisions(mesh)
+            subsystem.add_simple_collisions(mesh, unreal.ScriptCollisionShapeType.BOX)
+            eal.save_loaded_asset(mesh)
 
-        target = f"SM_{name}" if len(meshes) == 1 else f"SM_{name}_{i + 1:02d}"
+        prefix = "SK" if skeletal else "SM"
+        target = f"{prefix}_{name}" if len(meshes) == 1 else f"{prefix}_{name}_{i + 1:02d}"
         old_path = mesh.get_path_name().split(".")[0]
         new_path = f"{destination}/{target}"
         if old_path != new_path and not eal.does_asset_exist(new_path):
@@ -224,7 +233,7 @@ def main():
             continue
         meta = json.loads(meta_file.read_text(encoding="utf-8"))
         try:
-            ok = import_model(meta, folder) or import_texture_set(meta, folder)
+            ok = import_model(meta, folder) if is_model(meta) else import_texture_set(meta, folder)
         except Exception as error:
             ok = False
             unreal.log_error(f"[Ricovero] {meta.get('name')}: {error}")
