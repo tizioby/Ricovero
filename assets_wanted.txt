@@ -39,7 +39,7 @@ ambientcg | PaintedMetal006 | Surfaces | MetalPaintedGreen
 # armadietto metallico, porta d'ospedale, carte sparse, secchio, decal di muffa e infiltrazioni.
 
 # --- Mostro ------------------------------------------------------------------
-# Modello di fan (CC-BY, autore VertexVendingMachine) di The Boiled One: il personaggio
+# Modello di fan (CC-BY, autore landgr4) di The Boiled One: il personaggio
 # appartiene al suo creatore, quindi va bene per uso personale ma è un rischio se il gioco
 # viene pubblicato. Senza rig: per ora solo apparizioni statiche o scriptate.
-sketchfab | e08ae10f13c54d7db4e1a887c4787800 | Characters | BoiledOne
+sketchfab | 6e19b162b52a4393a19f485ea5dfde52 | Characters | BoiledOne
