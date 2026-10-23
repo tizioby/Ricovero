@@ -75,9 +75,11 @@ def door(label, x, yaw=90.0, y=-50.0, **props):
     return actor
 
 
-def neon(label, x, state):
+def neon(label, x, state, lumens=None):
     actor = spawn(unreal.RcvNeonLight, (x, 0, WALL_H - 8), label=label)
     actor.set_editor_property("initial_state", state)
+    if lumens is not None:
+        actor.set_editor_property("on_intensity_lumens", lumens)
     actor.set_folder_path("Lights")
     return actor
 
@@ -127,11 +129,19 @@ moon.light_component.set_attenuation_radius(1500)
 moon.set_folder_path("Lights")
 
 # Sedia a rotelle (fisica) davanti alla porta: va spinta via.
+# Pesante e frenata, non si ribalta e non ci si sale sopra: scivola come su ruote.
 wheelchair = box("Wheelchair", -100, -40, -30, 30, 0, 90)
 wheelchair_mesh = wheelchair.static_mesh_component
 wheelchair_mesh.set_mobility(unreal.ComponentMobility.MOVABLE)
 wheelchair_mesh.set_simulate_physics(True)
-wheelchair_mesh.set_mass_override_in_kg("", 20.0, True)
+wheelchair_mesh.set_mass_override_in_kg("", 45.0, True)
+wheelchair_mesh.set_linear_damping(2.5)
+wheelchair_mesh.set_angular_damping(6.0)
+wheelchair_mesh.set_editor_property("can_character_step_up_on", unreal.CanBeCharacterBase.ECB_NO)
+body = wheelchair_mesh.get_editor_property("body_instance")
+body.set_editor_property("lock_x_rotation", True)
+body.set_editor_property("lock_y_rotation", True)
+wheelchair_mesh.set_editor_property("body_instance", body)
 
 spawn(unreal.PlayerStart, (-300, 110, 100), yaw=0.0, label="PlayerStart")
 start1 = spawn(unreal.RcvActStart, (-300, 110, 100), yaw=0.0, label="ActStart_1")
@@ -172,9 +182,10 @@ pickup("Pickup_Battery_Act1", (1945, -80, 86), unreal.RcvPickupType.BATTERY)
 n1 = neon("Neon_01", 400, unreal.RcvNeonState.OFF)
 n2 = neon("Neon_02", 1000, unreal.RcvNeonState.FLICKER)
 n3 = neon("Neon_03", 1600, unreal.RcvNeonState.OFF)
-n4 = neon("Neon_04", 2200, unreal.RcvNeonState.ON)
-n5 = neon("Neon_05", 2550, unreal.RcvNeonState.ON)
-n6 = neon("Neon_06", 2900, unreal.RcvNeonState.ON)
+# Fondo del corridoio in penombra: abbastanza luce per vedere la sagoma, non di più.
+n4 = neon("Neon_04", 2200, unreal.RcvNeonState.ON, lumens=600)
+n5 = neon("Neon_05", 2550, unreal.RcvNeonState.FLICKER, lumens=450)
+n6 = neon("Neon_06", 2900, unreal.RcvNeonState.ON, lumens=300)
 
 # Sagoma del mostro: compare in fondo al corridoio e sparisce quando la luce si spegne.
 silhouette = box("Monster_Silhouette", 2770, 2830, -30, 30, 0, 215, mesh=CYLINDER)
