@@ -115,15 +115,15 @@ box("Monitor_Stand", -420, -380, -190, -150, 0, 110)
 box("Monitor", -425, -375, -190, -160, 110, 150)
 
 monitor_light = spawn(unreal.PointLight, (-400, -150, 135), label="Light_Monitor")
-monitor_light.light_component.set_intensity(15.0)
+monitor_light.light_component.set_intensity(80.0)
 monitor_light.light_component.set_light_color(unreal.LinearColor(0.4, 1.0, 0.5, 1.0))
-monitor_light.light_component.set_attenuation_radius(350)
+monitor_light.light_component.set_attenuation_radius(500)
 monitor_light.set_folder_path("Lights")
 
 moon = spawn(unreal.RectLight, (-600, 0, 230), yaw=0.0, pitch=-25.0, label="Light_Moon")
-moon.light_component.set_intensity(60.0)
+moon.light_component.set_intensity(800.0)
 moon.light_component.set_light_color(unreal.LinearColor(0.55, 0.68, 1.0, 1.0))
-moon.light_component.set_attenuation_radius(1200)
+moon.light_component.set_attenuation_radius(1500)
 moon.set_folder_path("Lights")
 
 # Sedia a rotelle (fisica) davanti alla porta: va spinta via.
@@ -213,7 +213,7 @@ start2.set_editor_property("act", 2)
 # --- Atmosfera -----------------------------------------------------------------
 
 sky = spawn(unreal.SkyLight, (0, 0, 600), label="SkyLight_Dim")
-sky.light_component.set_intensity(0.02)
+sky.light_component.set_intensity(0.15)
 sky.set_folder_path("Lights")
 
 fog = spawn(unreal.ExponentialHeightFog, (0, 0, 0), label="Fog")
@@ -225,10 +225,10 @@ fog.set_folder_path("Lights")
 ppv = spawn(unreal.PostProcessVolume, (1500, 0, 150), label="PostProcess")
 ppv.set_editor_property("unbound", True)
 settings = ppv.get_editor_property("settings")
-# Esposizione lenta e contenuta: il buio deve restare buio.
+# Esposizione lenta: l'occhio si adatta al buio, ma senza rendere tutto chiaro.
 for key, value in {
-    "auto_exposure_min_brightness": -1.5,
-    "auto_exposure_max_brightness": 2.0,
+    "auto_exposure_min_brightness": -4.0,
+    "auto_exposure_max_brightness": 4.0,
     "auto_exposure_speed_up": 0.6,
     "auto_exposure_speed_down": 0.4,
 }.items():
