@@ -98,10 +98,12 @@ def apply_modifiers():
     Il nome della proprietà è cambiato tra le versioni di UE, quindi si provano entrambe."""
     holder = None
     try:
-        mappings = list(imc.get_editor_property("mappings"))
-    except Exception:
+        # UE 5.6+: le mappature stanno in DefaultKeyMappings ("mappings" è deprecato).
         holder = imc.get_editor_property("default_key_mappings")
         mappings = list(holder.get_editor_property("mappings"))
+    except Exception:
+        holder = None
+        mappings = list(imc.get_editor_property("mappings"))
 
     for mapping, (_, _, modifiers) in zip(mappings, BINDINGS):
         mapping.set_editor_property("modifiers", [make_modifier(m) for m in modifiers])
