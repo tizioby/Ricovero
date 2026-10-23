@@ -478,6 +478,7 @@ surfaces = {
     "Room_": surface_material("WallPeelingPaint", 250.0),
     "Corridor_": surface_material("WallCrackedPlaster", 250.0),
     "Ward_": surface_material("WallTilesBroken", 120.0),
+    "Monitor_Stand": surface_material("MetalRustyPainted", 60.0),
 }
 # Porte: anta in metallo verniciato invece della griglia di prova.
 door_material = surface_material("MetalPaintedGreen", 100.0) or surface_material("MetalRustyPainted", 100.0)
