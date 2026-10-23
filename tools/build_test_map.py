@@ -93,7 +93,7 @@ pickup("Pickup_Key_Ward", (1500, -100, 10), unreal.RcvPickupType.KEY, key_id="Ke
 
 document = unreal.RcvDocument()
 document.set_editor_property("id", "Doc_Test")
-document.set_editor_property("title", "Cartella clinica — Paziente 104")
+document.set_editor_property("title", "Cartella clinica — Paziente 67")
 document.set_editor_property(
     "body",
     "Paziente sedato alle 23:40. Nessuna reazione agli stimoli.\n"

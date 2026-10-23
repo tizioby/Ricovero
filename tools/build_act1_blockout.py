@@ -1,7 +1,7 @@
 """
 Blockout dell'Atto 1 in /Game/Ricovero/Maps/L_Hospital (sovrascrive la mappa se esiste).
 
-Percorso: Stanza 104 (risveglio) -> corridoio principale (30 m) -> porta del reparto.
+Percorso: Stanza 67 (risveglio) -> corridoio principale (30 m) -> porta del reparto.
 Solo cubi grigi, luci e logica: serve a provare ritmo e durata prima degli asset veri.
 Misure in cm. X = avanti lungo il percorso, Y = sinistra/destra, Z = alto.
 
@@ -97,7 +97,7 @@ def step(delay, kind, targets=(), stagger=0.0, lock=False):
 box("Floor", -520, 3420, -220, 220, -10, 0)
 box("Ceiling", -520, 3420, -220, 220, WALL_H, WALL_H + 10)
 
-# --- Stanza 104 (x -500..0, y -200..200) --------------------------------------
+# --- Stanza 67 (x -500..0, y -200..200) --------------------------------------
 
 # Parete di fondo con la finestra (120 x 150 cm) da cui entra la luce della luna.
 box("Room_Back_L", -510, -490, -200, -60, 0, WALL_H)
@@ -139,7 +139,7 @@ start1.set_editor_property("act", 1)
 
 pickup("Pickup_Flashlight", (-150, 145, 86), unreal.RcvPickupType.FLASHLIGHT)
 
-door_104 = door("Door_104", 0)
+door_67 = door("Door_67", 0)
 
 # --- Corridoio principale (x 0..3000, y -125..125) -----------------------------
 
@@ -157,8 +157,8 @@ box("Bench", 1150, 1300, 70, 115, 0, 45)
 box("Gurney_Corridor", 1850, 2040, -115, -45, 0, 80)
 
 document = unreal.RcvDocument()
-document.set_editor_property("id", "Doc_Act1_Chart104")
-document.set_editor_property("title", "Cartella clinica - Stanza 104")
+document.set_editor_property("id", "Doc_Act1_Chart67")
+document.set_editor_property("title", "Cartella clinica - Stanza 67")
 document.set_editor_property(
     "body",
     "Paziente: [illeggibile]. Ricoverato il 14/03. Nessun documento d'identita'.\n"
@@ -166,7 +166,7 @@ document.set_editor_property(
     "23:40 - Paziente sedato. Nessuna reazione agli stimoli.\n"
     "Nota a matita, in fondo alla pagina: NON LASCIATELO SOLO DI NOTTE. LUI TORNA.",
 )
-pickup("Pickup_Chart104", (1225, 92, 50), unreal.RcvPickupType.DOCUMENT, document=document)
+pickup("Pickup_Chart67", (1225, 92, 50), unreal.RcvPickupType.DOCUMENT, document=document)
 pickup("Pickup_Battery_Act1", (1945, -80, 86), unreal.RcvPickupType.BATTERY)
 
 n1 = neon("Neon_01", 400, unreal.RcvNeonState.OFF)
@@ -192,7 +192,7 @@ event.set_editor_property("steps", [
     step(1.2, unreal.RcvStepType.LIGHTS_OFF, [n6, n5, n4], stagger=0.55),
     step(0.15, unreal.RcvStepType.HIDE_ACTORS, [silhouette]),
     step(0.8, unreal.RcvStepType.LIGHTS_OFF, [n2]),
-    step(1.5, unreal.RcvStepType.DOOR_SLAM, [door_104], lock=True),
+    step(1.5, unreal.RcvStepType.DOOR_SLAM, [door_67], lock=True),
 ])
 event.set_folder_path("Gameplay")
 
