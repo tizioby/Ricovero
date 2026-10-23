@@ -10,6 +10,10 @@
 #include "InputModifiers.h"
 #include "Kismet/GameplayStatics.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Flashlight/RcvFlashlightComponent.h"
+#include "Interaction/RcvInteractionComponent.h"
+#include "Inventory/RcvInventoryComponent.h"
+#include "Player/RcvPlayerController.h"
 #include "Player/RcvStaminaComponent.h"
 #include "Ricovero.h"
 
@@ -34,6 +38,14 @@ ARcvCharacter::ARcvCharacter(const FObjectInitializer& ObjectInitializer)
 	BreathAudio->SetupAttachment(FirstPersonCamera);
 	BreathAudio->bAutoActivate = false;
 	BreathAudio->bAllowSpatialization = false;
+
+	Inventory = CreateDefaultSubobject<URcvInventoryComponent>(TEXT("Inventory"));
+	Interaction = CreateDefaultSubobject<URcvInteractionComponent>(TEXT("Interaction"));
+
+	// Torcia tenuta poco sotto e a destra degli occhi, come in mano.
+	Flashlight = CreateDefaultSubobject<URcvFlashlightComponent>(TEXT("Flashlight"));
+	Flashlight->SetupAttachment(FirstPersonCamera);
+	Flashlight->SetRelativeLocation(FVector(10.f, 18.f, -14.f));
 
 	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
 	MoveComp->MaxWalkSpeed = WalkSpeed;
@@ -122,6 +134,15 @@ void ARcvCharacter::BuildMappingContext(UInputMappingContext* Context) const
 	MapKey(Context, CrouchAction, EKeys::LeftControl);
 	MapKey(Context, CrouchAction, EKeys::C);
 	MapKey(Context, CrouchAction, EKeys::Gamepad_RightThumbstick);
+
+	MapKey(Context, InteractAction, EKeys::E);
+	MapKey(Context, InteractAction, EKeys::Gamepad_FaceButton_Bottom);
+
+	MapKey(Context, FlashlightAction, EKeys::F);
+	MapKey(Context, FlashlightAction, EKeys::Gamepad_FaceButton_Top);
+
+	MapKey(Context, ReloadAction, EKeys::R);
+	MapKey(Context, ReloadAction, EKeys::Gamepad_FaceButton_Left);
 }
 
 void ARcvCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -153,6 +174,18 @@ void ARcvCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 	{
 		Input->BindAction(CrouchAction, ETriggerEvent::Started, this, &ARcvCharacter::CrouchStarted);
 		Input->BindAction(CrouchAction, ETriggerEvent::Completed, this, &ARcvCharacter::CrouchStopped);
+	}
+	if (InteractAction)
+	{
+		Input->BindAction(InteractAction, ETriggerEvent::Started, this, &ARcvCharacter::InteractPressed);
+	}
+	if (FlashlightAction)
+	{
+		Input->BindAction(FlashlightAction, ETriggerEvent::Started, this, &ARcvCharacter::FlashlightPressed);
+	}
+	if (ReloadAction)
+	{
+		Input->BindAction(ReloadAction, ETriggerEvent::Started, this, &ARcvCharacter::ReloadPressed);
 	}
 }
 
@@ -192,6 +225,37 @@ void ARcvCharacter::CrouchStarted()
 void ARcvCharacter::CrouchStopped()
 {
 	UnCrouch();
+}
+
+void ARcvCharacter::InteractPressed()
+{
+	// Mentre si legge un documento, lo stesso tasto lo chiude.
+	if (ARcvPlayerController* PC = Cast<ARcvPlayerController>(Controller))
+	{
+		if (PC->IsReadingDocument())
+		{
+			PC->CloseDocument();
+			return;
+		}
+	}
+	Interaction->TryInteract();
+}
+
+void ARcvCharacter::FlashlightPressed()
+{
+	Flashlight->Toggle();
+}
+
+void ARcvCharacter::ReloadPressed()
+{
+	if (!Flashlight->HasFlashlight() || Flashlight->GetBatteryRatio() >= 0.99f)
+	{
+		return;
+	}
+	if (Inventory->ConsumeBattery())
+	{
+		Flashlight->AddCharge(Flashlight->ChargePerBattery);
+	}
 }
 
 void ARcvCharacter::OnStartCrouch(float HalfHeightAdjust, float ScaledHalfHeightAdjust)
