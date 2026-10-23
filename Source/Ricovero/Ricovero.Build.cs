@@ -6,6 +6,9 @@ public class Ricovero : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
+		// Include relativi alla radice del modulo, es. "Player/RcvCharacter.h"
+		PublicIncludePaths.Add(ModuleDirectory);
+
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			"Core",
