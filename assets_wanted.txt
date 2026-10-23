@@ -1,0 +1,4 @@
+# Lista degli asset da scaricare con tools/download_assets.py
+# Formato: fonte | id | cartella di destinazione | note
+# Fonti supportate: polyhaven, ambientcg, sketchfab
+# Il lotto dell'Atto 1 viene aggiunto al Passo 5, dopo aver verificato qualita' e licenza di ogni asset.

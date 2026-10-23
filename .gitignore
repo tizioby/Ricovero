@@ -1,0 +1,29 @@
+# Unreal Engine
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
+
+# IDE / project files generati
+.vs/
+.vscode/
+.idea/
+*.sln
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+
+# Asset grezzi: rigenerabili con tools/download_assets.py
+Assets_Raw/
+
+# Python
+__pycache__/
+*.pyc
+
+# Segreti
+.env
