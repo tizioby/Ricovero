@@ -12,6 +12,7 @@ public class Ricovero : ModuleRules
 			"CoreUObject",
 			"Engine",
 			"InputCore",
+			"PhysicsCore",
 			"EnhancedInput",
 			"UMG"
 		});
