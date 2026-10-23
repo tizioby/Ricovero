@@ -1,6 +1,8 @@
 // Comandi console di debug (solo build non Shipping). Si scrivono nella console con il tasto \.
 
 #include "Flashlight/RcvFlashlightComponent.h"
+#include "Game/RcvGameInstance.h"
+#include "Game/RcvGameMode.h"
 #include "Inventory/RcvInventoryComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/RcvCharacter.h"
@@ -48,6 +50,29 @@ namespace
 				Inventory->AddKey(FName(*Args[0]));
 			}
 			UE_LOG(LogRcv, Display, TEXT("Rcv.GiveAll: torcia, %d pile"), Inventory->GetBatteryCount());
+		}));
+
+	FAutoConsoleCommandWithWorldAndArgs GoToActCommand(
+		TEXT("Rcv.GoToAct"),
+		TEXT("Salta all'inizio di un atto (1-4) per provarne ritmo e durata. Es: Rcv.GoToAct 2"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+		{
+			ARcvGameMode* GameMode = World ? World->GetAuthGameMode<ARcvGameMode>() : nullptr;
+			if (GameMode && Args.Num() > 0)
+			{
+				GameMode->DebugGoToAct(FCString::Atoi(*Args[0]));
+			}
+		}));
+
+	FAutoConsoleCommandWithWorldAndArgs TimeCommand(
+		TEXT("Rcv.Time"),
+		TEXT("Stampa nel log il tempo di gioco totale e per atto."),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+		{
+			if (const URcvGameInstance* GI = World ? World->GetGameInstance<URcvGameInstance>() : nullptr)
+			{
+				UE_LOG(LogRcvTimer, Display, TEXT("%s"), *GI->BuildTimeReport());
+			}
 		}));
 }
 

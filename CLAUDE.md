@@ -72,7 +72,7 @@ Texture PBR impacchettate in ORM (R = Occlusion, G = Roughness, B = Metallic).
 
 | Atto | Contenuto | Giocatore normale | Percorso ottimale |
 | --- | --- | --- | --- |
-| 1 | Risveglio, Stanza 104, primo corridoio | ~3 min | ~2:30 |
+| 1 | Risveglio, Stanza 67, primo corridoio | ~3 min | ~2:30 |
 | 2 | Reparto degenti, sala operatoria | ~6 min | ~4:30 |
 | 3 | Obitorio, ufficio del direttore | ~7 min | ~5 min |
 | 4 | Inseguimento, uscita di emergenza, finale | ~4 min | ~3 min |

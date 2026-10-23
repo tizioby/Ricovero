@@ -5,10 +5,21 @@
 #include "Inventory/RcvInventoryComponent.h"
 #include "RcvHUD.generated.h"
 
+class SWidget;
+
+UENUM()
+enum class ERcvMenu : uint8
+{
+	None,
+	Main,
+	Pause,
+	End
+};
+
 /**
- * HUD minimale disegnato su Canvas, senza asset: il punto centrale che si accende
- * sugli oggetti interattivi e il lettore dei documenti.
- * Nel Passo 5 il lettore passerà a un widget UMG con carta e grafica vera.
+ * HUD minimale senza asset: punto centrale che si accende sugli oggetti interattivi,
+ * lettore dei documenti (Canvas) e menu principale/pausa/fine (Slate).
+ * Nel Passo 5 lettore e menu passeranno a widget UMG con grafica vera.
  */
 UCLASS()
 class RICOVERO_API ARcvHUD : public AHUD
@@ -17,10 +28,16 @@ class RICOVERO_API ARcvHUD : public AHUD
 
 public:
 	virtual void DrawHUD() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	void ShowDocument(const FRcvDocument& Document);
 	void HideDocument();
 	bool IsShowingDocument() const { return bShowingDocument; }
+
+	/** Mostra un menu; Extra è un testo aggiuntivo (es. i tempi nella schermata finale). */
+	void ShowMenu(ERcvMenu Menu, const FString& Extra = FString());
+	void HideMenu();
+	ERcvMenu GetMenu() const { return CurrentMenu; }
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HUD")
@@ -40,4 +57,7 @@ private:
 	bool bShowingDocument = false;
 	FRcvDocument CurrentDocument;
 	float DotOpacity = 0.15f;
+
+	ERcvMenu CurrentMenu = ERcvMenu::None;
+	TSharedPtr<SWidget> MenuWidget;
 };
