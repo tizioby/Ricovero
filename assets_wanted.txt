@@ -1,4 +1,39 @@
 # Lista degli asset da scaricare con tools/download_assets.py
-# Formato: fonte | id | cartella di destinazione | note
-# Fonti supportate: polyhaven, ambientcg, sketchfab
-# Il lotto dell'Atto 1 viene aggiunto al Passo 5, dopo aver verificato qualita' e licenza di ogni asset.
+# Formato: fonte | id | categoria | nome
+# Fonti supportate: polyhaven, ambientcg, sketchfab (solo CC0 / CC-BY)
+# Tutti gli id sotto sono stati verificati con le API ufficiali (CC0).
+
+# --- Modelli ---------------------------------------------------------------
+polyhaven | old_bed_frame | Furniture | HospitalBedFrame          # letto in metallo arrugginito
+polyhaven | wheelchair_01 | Medical | Wheelchair                    # sedia a rotelle pieghevole
+polyhaven | vintage_crutches_01 | Medical | Crutches               # stampelle d'epoca
+polyhaven | medical_box | Medical | MedicalBox                     # cassetta pronto soccorso in metallo
+polyhaven | tool_cart | Medical | RustyTrolley                     # carrello su ruote arrugginito
+polyhaven | worn_metal_rack | Furniture | MetalRack                # scaffale in metallo
+polyhaven | metal_office_desk | Furniture | MetalDesk              # scrivania della guardiola
+polyhaven | SchoolChair_01 | Furniture | MetalChair                # sedia da sala d'attesa
+polyhaven | mounted_fluorescent_lights | Lighting | FluorescentLight
+polyhaven | caged_hanging_light | Lighting | CagedFluorescent       # locali tecnici, obitorio
+polyhaven | television_02 | Props | CrtTv                          # TV a tubo catodico
+polyhaven | WetFloorSign_01 | Props | WetFloorSign
+polyhaven | cardboard_box_01 | Props | CardboardBox
+polyhaven | clipboard | Props | Clipboard                          # supporto per i documenti
+polyhaven | metal_trash_can | Props | MetalTrashCan
+polyhaven | fire_alarm | Props | FireAlarm
+
+# --- Superfici ---------------------------------------------------------------
+polyhaven | peeling_painted_wall | Surfaces | WallPeelingPaint
+polyhaven | worn_cracked_plaster | Surfaces | WallCrackedPlaster
+polyhaven | concrete_wall_004 | Surfaces | WallStainedPaint
+polyhaven | long_white_tiles | Surfaces | WallTilesWhite
+ambientcg | Tiles133D | Surfaces | WallTilesBroken
+ambientcg | Concrete033 | Surfaces | TilesGreenMold
+polyhaven | worn_tile_floor | Surfaces | FloorTilesWorn
+polyhaven | old_linoleum_flooring_01 | Surfaces | FloorLinoleum
+polyhaven | painted_concrete | Surfaces | FloorPaintedConcrete
+ambientcg | OfficeCeiling001 | Surfaces | CeilingTiles               # pulito: va sporcato con decal
+polyhaven | rusty_painted_metal | Surfaces | MetalRustyPainted
+ambientcg | PaintedMetal006 | Surfaces | MetalPaintedGreen
+
+# Mancano nelle fonti CC0 (da Fab/Megascans con l'account di Nick): asta per flebo,
+# armadietto metallico, porta d'ospedale, carte sparse, secchio, decal di muffa e infiltrazioni.
