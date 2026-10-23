@@ -203,9 +203,11 @@ door("Door_Ward", 3000)
 
 event = spawn(unreal.RcvScriptedTrigger, (2050, 0, 150), label="Event_Act1_LightsOut")
 event.set_editor_property("steps", [
+    # La sagoma resta visibile poco più di mezzo secondo: si spegne la luce alle sue spalle e sparisce.
     step(0.0, unreal.RcvStepType.SHOW_ACTORS, [silhouette]),
-    step(1.2, unreal.RcvStepType.LIGHTS_OFF, [n6, n5, n4], stagger=0.55),
-    step(0.15, unreal.RcvStepType.HIDE_ACTORS, [silhouette]),
+    step(0.5, unreal.RcvStepType.LIGHTS_OFF, [n6]),
+    step(0.1, unreal.RcvStepType.HIDE_ACTORS, [silhouette]),
+    step(0.3, unreal.RcvStepType.LIGHTS_OFF, [n5, n4], stagger=0.5),
     step(0.8, unreal.RcvStepType.LIGHTS_OFF, [n2]),
     step(1.5, unreal.RcvStepType.DOOR_SLAM, [door_67], lock=True),
 ])
