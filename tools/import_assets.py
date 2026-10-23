@@ -25,7 +25,8 @@ asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
 eal = unreal.EditorAssetLibrary
 mel = unreal.MaterialEditingLibrary
 
-MODEL_EXTS = (".glb", ".gltf", ".fbx")
+# L'FBX viene prima: se c'è, è la versione sistemata con tools/fix_character_blender.py.
+MODEL_EXTS = (".fbx", ".glb", ".gltf")
 TEXTURE_EXTS = (".jpg", ".jpeg", ".png", ".tga", ".exr")
 
 # Riconoscimento delle mappe: suffissi Poly Haven (rinominati dal downloader o originali) e ambientCG.
@@ -194,7 +195,7 @@ def import_model(meta, folder):
     candidates = [p for p in folder.rglob("*") if p.suffix.lower() in MODEL_EXTS]
     if not candidates:
         return False
-    # Preferisce glb, poi gltf, poi fbx.
+    # Preferisce fbx (personaggi sistemati), poi glb, poi gltf.
     candidates.sort(key=lambda p: MODEL_EXTS.index(p.suffix.lower()))
     import_files([candidates[0]], destination)
 

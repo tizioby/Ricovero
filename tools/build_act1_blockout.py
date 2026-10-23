@@ -479,6 +479,13 @@ surfaces = {
     "Corridor_": surface_material("WallCrackedPlaster", 250.0),
     "Ward_": surface_material("WallTilesBroken", 120.0),
 }
+# Porte: anta in metallo verniciato invece della griglia di prova.
+door_material = surface_material("MetalPaintedGreen", 100.0) or surface_material("MetalRustyPainted", 100.0)
+if door_material:
+    for actor in actors.get_all_level_actors():
+        if isinstance(actor, unreal.RcvDoor):
+            actor.get_editor_property("leaf").set_material(0, door_material)
+
 for actor in actors.get_all_level_actors():
     if not isinstance(actor, unreal.StaticMeshActor) or str(actor.get_folder_path()) != "Blockout":
         continue
