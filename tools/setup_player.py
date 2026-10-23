@@ -6,7 +6,8 @@ Da eseguire nell'editor di Unreal: Output Log -> menu a tendina "Cmd" -> "Python
 oppure File -> Execute Python Script.
 
 Crea (o aggiorna, se esistono già):
-    /Game/Ricovero/Input/IA_Move, IA_Look, IA_Sprint, IA_Crouch, IMC_Default
+    /Game/Ricovero/Input/IA_Move, IA_Look, IA_Sprint, IA_Crouch, IA_Interact, IA_Flashlight, IA_Reload,
+    IMC_Default
     /Game/Ricovero/Blueprints/Player/BP_RcvCharacter (figlio di ARcvCharacter)
 """
 
@@ -49,6 +50,9 @@ ia_move = input_action("IA_Move", unreal.InputActionValueType.AXIS2D)
 ia_look = input_action("IA_Look", unreal.InputActionValueType.AXIS2D)
 ia_sprint = input_action("IA_Sprint", unreal.InputActionValueType.BOOLEAN)
 ia_crouch = input_action("IA_Crouch", unreal.InputActionValueType.BOOLEAN)
+ia_interact = input_action("IA_Interact", unreal.InputActionValueType.BOOLEAN)
+ia_flashlight = input_action("IA_Flashlight", unreal.InputActionValueType.BOOLEAN)
+ia_reload = input_action("IA_Reload", unreal.InputActionValueType.BOOLEAN)
 
 # --- Mapping Context -------------------------------------------------------
 # Ogni voce: (azione, tasto, modificatori). IA_Move usa X = destra, Y = avanti.
@@ -69,6 +73,12 @@ BINDINGS = [
     (ia_crouch, "LeftControl", []),
     (ia_crouch, "C", []),
     (ia_crouch, "Gamepad_RightThumbstick", []),
+    (ia_interact, "E", []),
+    (ia_interact, "Gamepad_FaceButton_Bottom", []),
+    (ia_flashlight, "F", []),
+    (ia_flashlight, "Gamepad_FaceButton_Top", []),
+    (ia_reload, "R", []),
+    (ia_reload, "Gamepad_FaceButton_Left", []),
 ]
 
 imc = load_or_create("IMC_Default", INPUT_DIR, unreal.InputMappingContext, unreal.InputMappingContext_Factory())
@@ -129,6 +139,9 @@ cdo.set_editor_property("move_action", ia_move)
 cdo.set_editor_property("look_action", ia_look)
 cdo.set_editor_property("sprint_action", ia_sprint)
 cdo.set_editor_property("crouch_action", ia_crouch)
+cdo.set_editor_property("interact_action", ia_interact)
+cdo.set_editor_property("flashlight_action", ia_flashlight)
+cdo.set_editor_property("reload_action", ia_reload)
 
 unreal.BlueprintEditorLibrary.compile_blueprint(bp)
 eal.save_loaded_asset(bp)

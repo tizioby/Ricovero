@@ -11,6 +11,9 @@ class UInputAction;
 class UInputMappingContext;
 class USoundBase;
 class URcvStaminaComponent;
+class URcvInventoryComponent;
+class URcvInteractionComponent;
+class URcvFlashlightComponent;
 struct FInputActionValue;
 
 /** Andatura corrente, usata per velocità, passi e head bob. */
@@ -48,6 +51,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Movimento")
 	UCameraComponent* GetFirstPersonCamera() const { return FirstPersonCamera; }
 
+	UFUNCTION(BlueprintPure, Category = "Componenti")
+	URcvInventoryComponent* GetInventory() const { return Inventory; }
+
+	UFUNCTION(BlueprintPure, Category = "Componenti")
+	URcvInteractionComponent* GetInteraction() const { return Interaction; }
+
+	UFUNCTION(BlueprintPure, Category = "Componenti")
+	URcvFlashlightComponent* GetFlashlight() const { return Flashlight; }
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -59,6 +71,15 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Componenti")
 	TObjectPtr<UAudioComponent> BreathAudio;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Componenti")
+	TObjectPtr<URcvInventoryComponent> Inventory;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Componenti")
+	TObjectPtr<URcvInteractionComponent> Interaction;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Componenti")
+	TObjectPtr<URcvFlashlightComponent> Flashlight;
 
 	// --- Input ---
 
@@ -76,6 +97,16 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> CrouchAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> InteractAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> FlashlightAction;
+
+	/** Cambia la pila della torcia, se ce n'è una nell'inventario. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> ReloadAction;
 
 	// --- Movimento (cm/s) ---
 
@@ -160,6 +191,9 @@ private:
 	void SprintStopped();
 	void CrouchStarted();
 	void CrouchStopped();
+	void InteractPressed();
+	void FlashlightPressed();
+	void ReloadPressed();
 
 	void UpdateGait();
 	void UpdateCamera(float DeltaSeconds);

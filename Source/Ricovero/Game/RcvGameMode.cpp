@@ -3,11 +3,13 @@
 #include "Player/RcvCharacter.h"
 #include "Player/RcvPlayerController.h"
 #include "Ricovero.h"
+#include "UI/RcvHUD.h"
 
 ARcvGameMode::ARcvGameMode()
 {
 	DefaultPawnClass = ARcvCharacter::StaticClass();
 	PlayerControllerClass = ARcvPlayerController::StaticClass();
+	HUDClass = ARcvHUD::StaticClass();
 }
 
 void ARcvGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
