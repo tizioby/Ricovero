@@ -20,9 +20,13 @@ WALL_T = 20.0
 level_editor = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 
+# Se la mappa è aperta non si può cancellare: prima si passa a una mappa vuota senza nome.
+unreal.EditorLoadingAndSavingUtils.new_blank_map(False)
 if unreal.EditorAssetLibrary.does_asset_exist(MAP_PATH):
-    unreal.EditorAssetLibrary.delete_asset(MAP_PATH)
-level_editor.new_level(MAP_PATH)
+    if not unreal.EditorAssetLibrary.delete_asset(MAP_PATH):
+        raise RuntimeError(f"Impossibile cancellare {MAP_PATH}: chiudila o liberala e riprova")
+if not level_editor.new_level(MAP_PATH):
+    raise RuntimeError(f"Impossibile creare {MAP_PATH}")
 
 
 def spawn(cls, location, yaw=0.0, label=None, pitch=0.0):
@@ -248,5 +252,6 @@ for key, value in {
 ppv.set_editor_property("settings", settings)
 ppv.set_folder_path("Lights")
 
-level_editor.save_current_level()
+if not level_editor.save_current_level():
+    raise RuntimeError(f"Salvataggio di {MAP_PATH} fallito")
 unreal.log(f"[Ricovero] Blockout Atto 1 salvato: {MAP_PATH}")

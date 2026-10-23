@@ -15,9 +15,13 @@ PLANE = "/Engine/BasicShapes/Plane.Plane"
 level_editor = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
 actors = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 
+# Se la mappa è aperta non si può cancellare: prima si passa a una mappa vuota senza nome.
+unreal.EditorLoadingAndSavingUtils.new_blank_map(False)
 if unreal.EditorAssetLibrary.does_asset_exist(MAP_PATH):
-    unreal.EditorAssetLibrary.delete_asset(MAP_PATH)
-level_editor.new_level(MAP_PATH)
+    if not unreal.EditorAssetLibrary.delete_asset(MAP_PATH):
+        raise RuntimeError(f"Impossibile cancellare {MAP_PATH}: chiudila o liberala e riprova")
+if not level_editor.new_level(MAP_PATH):
+    raise RuntimeError(f"Impossibile creare {MAP_PATH}")
 
 
 def spawn(cls, location, rotation=(0, 0, 0), label=None):
@@ -107,5 +111,6 @@ door_end = spawn(unreal.RcvDoor, (1900, -50, 0), (0, 90, 0), label="Door_Locked"
 door_end.set_editor_property("locked", True)
 door_end.set_editor_property("required_key", "Key_Ward")
 
-level_editor.save_current_level()
+if not level_editor.save_current_level():
+    raise RuntimeError(f"Salvataggio di {MAP_PATH} fallito")
 unreal.log(f"[Ricovero] Mappa di prova salvata: {MAP_PATH}")
